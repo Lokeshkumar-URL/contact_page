@@ -1,0 +1,2 @@
+import { timingSafeEqual } from 'node:crypto'; import { AppError } from '../errors/AppError.js';
+export function createApiAuthenticator(expected){return function(req,_res,next){if(!expected)return next();const provided=req.get('authorization')?.replace(/^Bearer\s+/i,'')??'';const a=Buffer.from(expected),b=Buffer.from(provided);if(a.length!==b.length||!timingSafeEqual(a,b))return next(new AppError(401,'UNAUTHORIZED','A valid API token is required.'));next();};}

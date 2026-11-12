@@ -1,0 +1,2 @@
+import { randomUUID } from 'node:crypto'; import { logger } from '../utils/logger.js';
+export function requestContext(req,res,next){req.id=req.get('x-request-id')||randomUUID();res.set('x-request-id',req.id);const started=performance.now();res.on('finish',()=>logger.info('Request completed',{requestId:req.id,method:req.method,path:req.originalUrl,status:res.statusCode,durationMs:Math.round(performance.now()-started)}));next();}

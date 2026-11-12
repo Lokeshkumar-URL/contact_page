@@ -1,0 +1,17 @@
+{
+  "name": "contact-page-automation",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "test:frontend:regression": "node scripts/run-frontend-regression.js",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

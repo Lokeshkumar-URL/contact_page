@@ -1,0 +1,3 @@
+const levels={debug:10,info:20,warn:30,error:40};
+export function createLogger({level=process.env.LOG_LEVEL??'info',sink=console}={}){ const write=(l,message,context={})=>{if(levels[l]<levels[level])return; const record={timestamp:new Date().toISOString(),level:l,message,...context}; if(record.error instanceof Error)record.error={name:record.error.name,message:record.error.message,stack:process.env.NODE_ENV==='production'?undefined:record.error.stack}; (l==='error'?sink.error:l==='warn'?sink.warn:sink.log)(JSON.stringify(record));}; return {debug:(m,c)=>write('debug',m,c),info:(m,c)=>write('info',m,c),warn:(m,c)=>write('warn',m,c),error:(m,c)=>write('error',m,c)}; }
+export const logger=createLogger();
