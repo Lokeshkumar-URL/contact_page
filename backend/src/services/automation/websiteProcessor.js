@@ -26,7 +26,10 @@ const defaultManagers = new Map(); // one shared browser per mode, so switching 
 const defaults = { solveWidgetCapSolver, isCapSolverResponseReady, isVerificationComplete, solveWidgetOhMyCaptcha, navigateSafely, closeCommonPopups, findContactPage, findAlternateFormPage, extractForms, selectContactForm, mapFieldsWithClaudeFallback, createSafeContactLinkFallback, createSafeSubmitControlFallback, fillForm, captureScreenshot, submitForm, verifySubmission, solveFormImageCaptcha, solveMathCaptcha, waitForWidgetCaptcha, detectCaptcha, guardAgainstBrowserChallenge, getApprovedCustomFields, recordFieldSuggestions, ensureFieldsStillFilled };
 
 async function getDefaultManager(config = {}) {
-  const headless = config.browserMode !== 'visible';
+  // A container/server normally has no graphical display. When the deployment
+  // explicitly requires headless Chrome, do not let a previously saved UI
+  // preference for "visible" mode make Puppeteer fail during launch.
+  const headless = env.headless === true || config.browserMode !== 'visible';
   const cached = defaultManagers.get(headless);
   if (cached) {
     const manager = await cached.catch(() => null);
@@ -144,4 +147,4 @@ export async function processWebsite(row, options = {}) {
     if (!error.screenshot && page) { try { error.screenshot = await api.captureScreenshot({ page, runId, rowNumber: row.rowNumber, stage: error.code === 'MANUAL_REVIEW' ? 'manual-review' : 'failed' }); } catch { /* Preserve the original processing error. */ } }
     throw error;
   } finally { if (page) await manager.safeClosePage(page); }
-}
+}//
