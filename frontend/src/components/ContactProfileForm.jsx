@@ -29,6 +29,21 @@ export default function ContactProfileForm({ initialProfile = {}, onSave }) {
     setSaved(false);
   }
 
+  function updateCustomField(index, event) {
+    const { name, value } = event.target;
+    setProfile((current) => ({ ...current, customFields: (current.customFields ?? []).map((field, fieldIndex) => fieldIndex === index ? { ...field, [name]: value } : field) }));
+    setErrors((current) => ({ ...current, customFields: undefined })); setSaved(false);
+  }
+
+  function addCustomField() {
+    setProfile((current) => ({ ...current, customFields: [...(current.customFields ?? []), { fieldName: '', aliases: '', value: '' }] })); setSaved(false);
+  }
+
+  function removeCustomField(index) {
+    setProfile((current) => ({ ...current, customFields: (current.customFields ?? []).filter((_, fieldIndex) => fieldIndex !== index) }));
+    setErrors((current) => ({ ...current, customFields: undefined })); setSaved(false);
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
     const nextErrors = validateContactProfile(profile);
@@ -63,8 +78,30 @@ export default function ContactProfileForm({ initialProfile = {}, onSave }) {
         <ProfileField label="Phone" name="phone" type="tel" value={profile.phone} error={errors.phone} onChange={updateField} autoComplete="tel" />
       </div>
 
+      <div className="custom-fields" aria-labelledby="custom-fields-title">
+        <div className="custom-fields-heading"><div><h3 id="custom-fields-title">Custom form fields</h3><p>Add approved values for extra website fields that are not covered above.</p></div><button className="secondary-button" type="button" onClick={addCustomField}>+ Add field</button></div>
+        {(profile.customFields ?? []).map((field, index) => (
+          <div className="custom-field-row" key={index}>
+            <label className="field"><span>Website field name</span><input name="fieldName" value={field.fieldName} onChange={(event) => updateCustomField(index, event)} placeholder="Example: Practice size" /></label>
+            <label className="field"><span>Alternative names</span><input name="aliases" value={field.aliases ?? ''} onChange={(event) => updateCustomField(index, event)} placeholder="Office count, Number of locations" /></label>
+            <label className="field"><span>Approved value</span><input name="value" value={field.value} onChange={(event) => updateCustomField(index, event)} placeholder="Example: 1–5" /></label>
+            <button className="secondary-button remove-custom-field" type="button" onClick={() => removeCustomField(index)} aria-label={`Remove custom field ${index + 1}`}>Remove</button>
+          </div>
+        ))}
+        {errors.customFields && <span className="field-error" role="alert">{errors.customFields}</span>}
+        <small>Use the exact dropdown or radio option text when the website requires a choice. Sensitive fields remain blocked.</small>
+      </div>
+
       <div className="form-divider" />
-      <div className="form-section-heading compact-section"><div><span className="section-number muted-number">04</span><h2>Business address</h2><p>Optional fields are used only when a matching form field exists.</p></div></div>
+      <div className="form-section-heading compact-section"><div><span className="section-number muted-number">04</span><h2>Approved form choices</h2><p>Optional exact values for required dropdowns or customer-status questions. Leave blank to require manual review.</p></div></div>
+      <div className="form-grid two-column">
+        <ProfileField label="Subject" name="subject" value={profile.subject} error={errors.subject} onChange={updateField} placeholder="Example: Business Inquiry" />
+        <ProfileField label="Contact purpose" name="contactPurpose" value={profile.contactPurpose} error={errors.contactPurpose} onChange={updateField} placeholder="Example: General inquiry" />
+        <ProfileField label="Existing customer" name="existingCustomer" value={profile.existingCustomer} error={errors.existingCustomer} onChange={updateField} placeholder="Example: No" />
+      </div>
+
+      <div className="form-divider" />
+      <div className="form-section-heading compact-section"><div><span className="section-number muted-number">05</span><h2>Business address</h2><p>Optional fields are used only when a matching form field exists.</p></div></div>
       <div className="form-grid address-grid">
         <label className="field street-field"><span>Street address</span><input name="streetAddress" value={profile.streetAddress} onChange={updateField} autoComplete="street-address" /></label>
         <label className="field"><span>City</span><input name="city" value={profile.city} onChange={updateField} autoComplete="address-level2" /></label>

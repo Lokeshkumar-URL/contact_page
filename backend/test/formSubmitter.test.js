@@ -39,3 +39,25 @@ test('timeouts and ambiguous results are non-retryable uncertain submissions', a
 test('ambiguous submit controls are blocked before clicking', () => {
   assert.equal(selectSubmitButton({ submitButtons: [{ selector: '#a', text: 'Continue' }, { selector: '#b', text: 'Next' }] }), null);
 });
+
+test('submit controls are recognized across common website labels', () => {
+  for (const text of ['Send', 'Submit', 'Submit Message', 'Send a Message', 'Contact Us', 'Request Quote', 'Send Enquiry', 'Get in Touch', 'Talk to Sales', 'Book a Demo', 'Request Information']) {
+    assert.equal(selectSubmitButton({ submitButtons: [{ selector: '#primary', text }, { selector: '#other', text: 'Next' }] }).selector, '#primary');
+  }
+  assert.equal(selectSubmitButton({ submitButtons: [{ selector: '#only', text: 'Go' }] }).selector, '#only');
+});
+
+test('Claude submit fallback is called only when deterministic rules are ambiguous', async () => {
+  let fallbackCalls = 0;
+  const clearResult = await submitForm({ page: page(), form, dryRun: true, resolveSubmitButton: async () => { fallbackCalls += 1; return null; } });
+  assert.equal(clearResult.claudeAttempted, false); assert.equal(fallbackCalls, 0);
+
+  const ambiguousForm = { selector: '#contact', submitButtons: [{ selector: '#a', text: 'Action A' }, { selector: '#b', text: 'Action B' }] };
+  const fallbackResult = await submitForm({ page: page(), form: ambiguousForm, dryRun: true, resolveSubmitButton: async (buttons) => { fallbackCalls += 1; return { button: buttons[1], claudeAttempted: true, claudeUsed: true }; } });
+  assert.equal(fallbackResult.claudeAttempted, true); assert.equal(fallbackResult.claudeUsed, true); assert.equal(fallbackCalls, 1);
+});
+
+test('an unavailable or uncertain Claude fallback never invents a submit action', async () => {
+  const ambiguousForm = { selector: '#contact', submitButtons: [{ selector: '#a', text: 'Action A' }, { selector: '#b', text: 'Action B' }] };
+  await assert.rejects(() => submitForm({ page: page(), form: ambiguousForm, dryRun: true, resolveSubmitButton: async () => ({ button: null, claudeAttempted: true, claudeUsed: false }) }), (error) => error instanceof SubmissionError && error.submissionStarted === false);
+});

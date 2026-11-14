@@ -4,6 +4,7 @@ import { createClaudeClient } from '../src/services/claude/claudeClient.js';
 import { ClaudeUsageTracker } from '../src/services/claude/claudeUsageTracker.js';
 import { createSafeContactLinkFallback } from '../src/services/claude/contactLinkResolver.js';
 import { mapFieldsWithClaudeFallback, resolveFieldMappings } from '../src/services/claude/fieldMappingResolver.js';
+import { createSafeSubmitControlFallback, resolveSubmitControl } from '../src/services/claude/submitControlResolver.js';
 
 const profile = { firstName: 'Patrick', lastName: 'Joe', email: 'patrick@example.com', phone: '1234567890', organization: 'Example Co', title: 'Manager', streetAddress: '1 Main St', city: 'Claymont', state: 'DE', zipCode: '19703', message: 'Approved message' };
 const field = (index, overrides = {}) => ({ index, selector: `#verified-${index}`, tag: 'input', type: 'text', name: '', id: '', label: '', accessibleName: '', placeholder: '', autocomplete: '', ariaDescribedBy: '', fillable: true, disabled: false, readOnly: false, ...overrides });
@@ -57,4 +58,36 @@ test('per-website tracker records successful and failed fallback operations', as
   assert.equal(tracker.get('row-2').claudeUsed, true);
   const failedResolver = createSafeContactLinkFallback({ client: { messages: { create: async () => { throw new Error('offline'); } } }, model: 'test-model', tracker, websiteKey: 'row-3' });
   assert.equal(await failedResolver(candidates), null); assert.equal(tracker.get('row-3').claudeUsed, false); assert.equal(tracker.get('row-3').claudeAttempted, true);
+});
+
+test('Claude submit fallback can select only a supplied control index', async () => {
+  let request;
+  const buttons = [{ selector: '#server-a', text: 'Primary action' }, { selector: '#server-b', text: 'Deliver this note' }];
+  const client = { messages: { create: async (input) => { request = input; return { content: [{ type: 'text', text: '{"buttonIndex":1,"confidence":"high"}' }] }; } } };
+  const selected = await resolveSubmitControl({ client, model: 'test-model', buttons });
+  assert.equal(selected.selector, '#server-b');
+  assert.doesNotMatch(request.messages[0].content, /server-a|server-b/);
+  assert.match(request.system, /untrusted data/i);
+
+  const invented = { messages: { create: async () => ({ content: [{ type: 'text', text: '{"buttonIndex":99,"confidence":"high"}' }] }) } };
+  await assert.rejects(() => resolveSubmitControl({ client: invented, model: 'test-model', buttons }), /invented submit-control index/i);
+});
+
+test('safe submit fallback records usage and returns no selection when Claude is unavailable', async () => {
+  const tracker = new ClaudeUsageTracker(); const buttons = [{ selector: '#a', text: 'A' }, { selector: '#b', text: 'B' }];
+  const unavailable = createSafeSubmitControlFallback({ client: null, tracker, websiteKey: 'row-4' });
+  assert.deepEqual(await unavailable(buttons), { button: null, claudeAttempted: false, claudeUsed: false });
+  assert.equal(tracker.get('row-4').claudeAttempted, false);
+
+  const client = { messages: { create: async () => ({ content: [{ type: 'text', text: '{"buttonIndex":0,"confidence":"medium"}' }] }) } };
+  const resolver = createSafeSubmitControlFallback({ client, model: 'test-model', tracker, websiteKey: 'row-5' });
+  const result = await resolver(buttons);
+  assert.equal(result.button.selector, '#a'); assert.equal(result.claudeUsed, true); assert.equal(tracker.get('row-5').claudeUsed, true);
+});
+
+test('Claude can use an approved custom target without receiving its value', async () => {
+  let request;const customProfile={...profile,customFields:[{fieldName:'Practice size',aliases:'Office count',value:'1-5'}]};
+  const client={messages:{create:async(input)=>{request=input;return {content:[{type:'text',text:'{"mappings":[{"fieldIndex":12,"profileKey":"custom:0","confidence":"high"}]}'}]};}}};
+  const result=await mapFieldsWithClaudeFallback({fields:[field(12,{label:'Size of your operation'})],profile:customProfile,client,model:'test-model'});
+  assert.equal(result.mappings[0].value,'1-5');assert.equal(result.mappings[0].profileKey,'custom:0');assert.doesNotMatch(request.messages[0].content,/1-5/);
 });

@@ -11,3 +11,10 @@ backend/storage/screenshots/*
 npm-debug.log*
 .DS_Store
 Thumbs.db
+backend/storage/runs.json
+
+backend/storage/users.json
+backend/storage/users.json.*.tmp
+
+backend/storage/google-accounts.json
+backend/storage/google-accounts.json.*.tmp

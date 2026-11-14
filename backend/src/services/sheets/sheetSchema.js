@@ -1,7 +1,7 @@
 export const SHEET_HEADERS = Object.freeze({
   url: 'URL', status: 'Status', reason: 'Reason', timestamp: 'Timestamp', screenshot: 'Screenshot',
   runId: 'Run ID', attemptCount: 'Attempt Count', contactPageUrl: 'Contact Page URL',
-  claudeUsed: 'Claude Used', verificationEvidence: 'Verification Evidence', reservedAt: 'Reserved At',
+  claudeUsed: 'Claude Used', verificationEvidence: 'Verification Evidence', reservedAt: 'Reserved At', captcha: 'CAPTCHA',
 });
 
 export const REQUIRED_HEADERS = Object.freeze(['URL', 'Status', 'Reason', 'Timestamp', 'Run ID', 'Attempt Count', 'Reserved At']);

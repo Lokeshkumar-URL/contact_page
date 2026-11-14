@@ -1,4 +1,4 @@
-export const retryPolicy = Object.freeze({ maxAttempts: 2, baseDelayMs: 100, retryableStages: ['navigation', 'page_load'] });
+export const retryPolicy = Object.freeze({ maxAttempts: 3, baseDelayMs: 2000, retryableStages: ['navigation', 'page_load'] });
 export function isSafeToRetry(error, attempt, policy = retryPolicy) { return attempt < policy.maxAttempts && error?.retryable === true && error?.submissionStarted !== true && policy.retryableStages.includes(error?.stage); }
 export async function executeWithRetry(operation, policy = retryPolicy, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))) {
   let attempt = 1;

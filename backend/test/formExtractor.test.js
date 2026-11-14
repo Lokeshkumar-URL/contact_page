@@ -55,3 +55,18 @@ test('missing or unrelated forms produce a typed non-retryable failure', async (
   const search = { index: 0, id: 'search', action: '/search', text: 'Search', fields: [{ tag: 'input', type: 'search', name: 'q', fillable: true }], submitButtons: [{ text: 'Search' }] };
   await assert.rejects(() => extractForms({ page: { evaluate: async () => ({ forms: [search], pageHasCaptcha: false }) } }), FormNotFoundError);
 });
+
+test('embedded form providers are inspected when the main page has no contact form', async () => {
+  const search = { index: 0, id: 'search', action: '/search', text: 'Search', fields: [{ tag: 'input', type: 'search', name: 'q', fillable: true }], submitButtons: [{ text: 'Search' }] };
+  const frame = { url: () => 'https://www.emailmeform.com/builder/embed/example', evaluate: async () => ({ forms: [contactForm], pageHasCaptcha: false }) };
+  const page = { url: () => 'https://example.com/contact', evaluate: async () => ({ forms: [search], pageHasCaptcha: false }), mainFrame: () => page, frames: () => [page,frame] };
+  const result = await extractForms({ page, timeout: 1 });
+  assert.equal(result.selectedForm.id, 'contact-form');
+  assert.equal(result.context, frame);
+  assert.match(result.frameUrl, /emailmeform/);
+});
+
+test('custom date and time schedulers require manual review instead of reporting no form', async () => {
+  const page={waitForFunction:async()=>{throw new Error('none');},evaluate:async()=>({forms:[],pageHasCaptcha:false,unsupportedScheduling:true})};
+  await assert.rejects(()=>extractForms({page,timeout:1}),(error)=>error.code==='MANUAL_REVIEW'&&error.reasons[0].code==='UNSUPPORTED_MULTI_STEP');
+});

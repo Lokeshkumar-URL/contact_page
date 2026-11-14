@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { after, before, test } from 'node:test';
 import { createApp } from '../src/app.js';
 import { loadEnv } from '../src/config/env.js';
 import { createLogger } from '../src/utils/logger.js';
 import { validateConfig } from '../src/validators/configValidator.js';
-import { runs } from '../src/services/automation/jobState.js';
+import { appendRunResult, createRun, runs } from '../src/services/automation/jobState.js';
 import { configureAutomationRuntimeForTests, resetAutomationRuntimeForTests } from '../src/services/automation/automationRuntime.js';
+import { SCREENSHOT_DIRECTORY } from '../src/services/browser/screenshotService.js';
 
 let server; let baseUrl;
 before(async () => {
@@ -51,6 +55,11 @@ test('request validation and centralized errors return consistent payloads', asy
   const missing = await request('/api/no-such-route'); assert.equal(missing.status, 404); assert.equal((await missing.json()).error.code, 'ROUTE_NOT_FOUND');
 });
 
+test('field-mapping registry endpoints are authenticated and validated', async () => {
+  const listed=await request('/api/field-mappings');assert.equal(listed.status,200);const payload=await listed.json();assert.ok(Array.isArray(payload.pending));assert.ok(Array.isArray(payload.approved));
+  const invalid=await request('/api/field-mappings/not-valid/approve',{method:'POST',body:JSON.stringify({value:'Approved'})});assert.equal(invalid.status,400);assert.equal((await invalid.json()).error.code,'VALIDATION_ERROR');
+});
+
 test('automation controllers create and transition an in-memory run', async () => {
   const started = await request('/api/automation/start', { method: 'POST', body: JSON.stringify({ dryRun: true }) });
   assert.equal(started.status, 202); const run = await started.json(); assert.equal(run.status, 'queued');
@@ -58,4 +67,14 @@ test('automation controllers create and transition an in-memory run', async () =
   const resumed = await request(`/api/automation/${run.runId}/resume`, { method: 'POST' }); assert.equal((await resumed.json()).status, 'queued');
   const stopped = await request(`/api/automation/${run.runId}/stop`, { method: 'POST' }); assert.equal((await stopped.json()).status, 'stopped');
   const conflict = await request(`/api/automation/${run.runId}/pause`, { method: 'POST' }); assert.equal(conflict.status, 409); assert.equal((await conflict.json()).error.code, 'INVALID_RUN_STATE');
+});
+
+test('authenticated screenshot endpoint serves evidence from the stable storage directory', async () => {
+  await mkdir(SCREENSHOT_DIRECTORY,{recursive:true});const filename=`test-${randomUUID()}.png`;const screenshot=path.join(SCREENSHOT_DIRECTORY,filename);
+  try {
+    await writeFile(screenshot,Buffer.from('screenshot-evidence'));
+    const run=createRun({spreadsheetId:`sheet-${randomUUID()}`,sheetName:'Websites',dryRun:true});appendRunResult(run.runId,{id:'2',rowNumber:2,url:'https://example.test',status:'failed',screenshot});
+    const listed=await request(`/api/results/${run.runId}`);const payload=await listed.json();assert.equal(payload.results[0].screenshot,`/api/results/${run.runId}/screenshots/${filename}`);
+    const asset=await request(payload.results[0].screenshot);assert.equal(asset.status,200);assert.equal(await asset.text(),'screenshot-evidence');
+  } finally { await unlink(screenshot).catch(()=>{}); }
 });

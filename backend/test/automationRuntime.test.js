@@ -19,3 +19,8 @@ test('runtime startup failures are recorded on the run', async () => {
 test('API configuration is normalized with safe runtime defaults', () => {
   const config=buildRunConfiguration({spreadsheetId:'sheet-1',dryRun:true,contactProfile:{email:'person@example.com'}}); assert.equal(config.sheetName,'Websites'); assert.equal(config.batchSize,10); assert.equal(config.contactProfile.email,'person@example.com');
 });
+
+test('confirmed live configuration preserves bounded batch and concurrency settings', () => {
+  const config=buildRunConfiguration({dryRun:false,liveConfirmed:true,batchSize:10,concurrency:10});
+  assert.equal(config.batchSize,10);assert.equal(config.concurrency,10);assert.equal(config.dryRun,false);assert.equal(config.liveConfirmed,true);
+});

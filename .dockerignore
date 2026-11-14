@@ -1,0 +1,14 @@
+.git
+.gitignore
+.dockerignore
+node_modules
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+backend/storage
+npm-debug.log*
+*.log
+.DS_Store
+Thumbs.db

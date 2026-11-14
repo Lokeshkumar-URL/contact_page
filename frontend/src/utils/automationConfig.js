@@ -6,6 +6,7 @@ export const DEFAULT_AUTOMATION_CONFIG = Object.freeze({
   timeoutSeconds: 45,
   browserMode: 'visible',
   dryRun: true,
+  googleAccountId: '',
 });
 
 const numericRules = {
@@ -13,6 +14,12 @@ const numericRules = {
   concurrency: { min: 1, max: 10, label: 'Concurrency' },
   timeoutSeconds: { min: 10, max: 120, label: 'Page timeout' },
 };
+
+/** Accepts a bare sheet ID or a full Google Sheets URL and returns just the ID. */
+export function extractSpreadsheetId(value) {
+  const text = String(value ?? '').trim();
+  return text.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/)?.[1] ?? text;
+}
 
 export function validateAutomationConfig(config) {
   const errors = {};
@@ -37,7 +44,8 @@ export function validateAutomationConfig(config) {
 export function normalizeAutomationConfig(config) {
   return {
     ...config,
-    spreadsheetId: config.spreadsheetId.trim(),
+    spreadsheetId: extractSpreadsheetId(config.spreadsheetId),
+    googleAccountId: config.googleAccountId || '',
     sheetName: config.sheetName.trim(),
     batchSize: Number(config.batchSize),
     concurrency: Number(config.concurrency),

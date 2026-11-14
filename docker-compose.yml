@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 5173
+      FRONTEND_ORIGIN: http://leadfill.zeacrm.com
+      APP_BASE_URL: http://leadfill.zeacrm.com
+      PUPPETEER_HEADLESS: "true"
+      CAPTCHA_MANUAL_ENTRY_TIMEOUT_SECONDS: 0
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./backend/storage:/app/backend/storage
+    init: true
+    shm_size: 1gb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_API_AUTH_TOKEN: ""
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:7878:80"
+    restart: unless-stopped

@@ -54,6 +54,14 @@ test('automation runner processes batches, tracks progress, and completes rows o
   assert.ok(sheets.matrix.slice(1).every((row) => row[1] === 'Success'));
 });
 
+test('confirmed live runner processes the full batch with configured concurrency', async () => {
+  const sheets = createMutableSheets(['https://one.example','https://two.example','https://three.example']);
+  const run = createRun({ spreadsheetId: 'sheet-1', sheetName: 'Websites', batchSize: 3, concurrency: 2, dryRun: false, liveConfirmed: true });
+  let active=0;let peak=0;
+  const completed = await runAutomation({ runId: run.runId, sheets, processWebsite: async () => { active+=1;peak=Math.max(peak,active);await new Promise((resolve)=>setTimeout(resolve,5));active-=1;return { status:'Success', verificationEvidence:'Thank you' }; } });
+  assert.equal(completed.results.length,3);assert.equal(peak,2);assert.ok(sheets.matrix.slice(1).every((row)=>row[1]==='Success'));
+});
+
 test('stopping a run prevents new work and releases reserved rows', async () => {
   const sheets = createMutableSheets(['https://one.example','https://two.example','https://three.example']);
   const run = createRun({ spreadsheetId: 'sheet-1', sheetName: 'Websites', batchSize: 10, concurrency: 1, dryRun: true });

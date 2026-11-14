@@ -27,6 +27,28 @@ export function createRun(config = {}) {
 export function getRun(runId) { return runs.get(runId); }
 export function appendRunResult(runId, result) { const run=runs.get(runId);if(!run)return null;run.results=[...run.results,result];run.updatedAt=new Date().toISOString();publish(run);return result; }
 export function removeRunResult(runId,rowNumber){const run=runs.get(runId);if(!run)return null;const result=run.results.find((item)=>item.rowNumber===rowNumber);if(!result)return null;run.results=run.results.filter((item)=>item!==result);const key=result.status==='manual_review'?'manualReview':result.status;run.progress={...run.progress,processed:Math.max(0,run.progress.processed-1),remaining:run.progress.remaining+1,[key]:Math.max(0,(run.progress[key]??0)-1)};run.updatedAt=new Date().toISOString();publish(run);return result;}
+export const isActiveRun = (run) => activeStatuses.has(run?.status);
+/** Removes a finished run and everything held in memory for it. Callers must refuse active runs first. */
+export function deleteRun(runId) {
+  const run = runs.get(runId); if (!run) return null;
+  runs.delete(runId); controls.delete(runId); sequences.delete(runId);
+  if (activeSources.get(run.sourceKey) === runId) activeSources.delete(run.sourceKey);
+  events.emit('*', run); // lets run persistence save the new list
+  return run;
+}
+/** Removes results from a run's activity and keeps its progress counters consistent. Returns the removed results. */
+export function removeResults(runId, rowNumbers) {
+  const run = runs.get(runId); if (!run) return [];
+  const wanted = new Set(rowNumbers); const removed = run.results.filter((r) => wanted.has(r.rowNumber)); if (!removed.length) return [];
+  const progress = { ...run.progress };
+  for (const result of removed) {
+    const key = result.status === 'manual_review' ? 'manualReview' : result.status;
+    if (key in progress) progress[key] = Math.max(0, progress[key] - 1);
+    progress.processed = Math.max(0, progress.processed - 1); progress.total = Math.max(0, progress.total - 1);
+  }
+  run.results = run.results.filter((r) => !wanted.has(r.rowNumber)); run.progress = progress; run.updatedAt = new Date().toISOString(); publish(run);
+  return removed;
+}
 export function updateRun(runId, patch) { const run = runs.get(runId); if (!run) return null; Object.assign(run, patch, { updatedAt: new Date().toISOString() }); publish(run); return run; }
 export function updateProgress(runId, patch) { const run = runs.get(runId); if (!run) return null; run.progress = { ...run.progress, ...patch }; run.updatedAt = new Date().toISOString(); publish(run); return run; }
 export function setRunStatus(runId, status, patch = {}) {

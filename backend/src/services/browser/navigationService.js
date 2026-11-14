@@ -15,7 +15,16 @@ export function isPrivateAddress(address = '') {
   return false;
 }
 
-export async function assertSafePublicUrl(value, resolveHost = (hostname) => lookup(hostname, { all: true })) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export async function lookupWithRetry(hostname, { attempts = 3, delayMs = 1000, resolve = (host) => lookup(host, { all: true }) } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try { return await resolve(hostname); } catch (error) { lastError = error; if (attempt < attempts) await sleep(delayMs * attempt); }
+  }
+  throw lastError;
+}
+
+export async function assertSafePublicUrl(value, resolveHost = (hostname) => lookupWithRetry(hostname)) {
   let url;
   try { url = new URL(value); } catch { throw new NavigationError('The website URL is invalid.', { code: 'INVALID_URL', url: String(value) }); }
   if (!['http:', 'https:'].includes(url.protocol)) throw new NavigationError('Only HTTP and HTTPS websites are supported.', { code: 'UNSAFE_PROTOCOL', url: url.href });

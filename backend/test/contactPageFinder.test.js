@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   ContactPageNotFoundError,
+  findAlternateFormPage,
   findContactPage,
   rankContactCandidates,
   scoreContactCandidate,
@@ -72,4 +73,13 @@ test('Claude resolver sends only candidates and rejects invented selections', as
   assert.equal(selection.url, candidates[0].url); assert.doesNotMatch(request.messages[0].content, /<html/i);
   const badClient = { messages: { create: async () => ({ content: [{ type: 'text', text: '{"url":"https://evil.example/contact","confidence":"high"}' }] }) } };
   await assert.rejects(() => resolveContactLink({ client: badClient, model: 'test-model', candidates }), /outside the validated candidate list/);
+});
+
+test('alternate form discovery follows a Demo or Quote CTA after a contact page has no form', async () => {
+  const page = mockPage({ baseUrl: 'https://example.com/contact', links: [
+    { href: '/about', text: 'About us', context: 'nav' },
+    { href: '/book-a-demo', text: 'Book a Demo', context: 'body' },
+  ] });
+  const result = await findAlternateFormPage({ page, baseUrl: 'https://example.com/contact' });
+  assert.equal(result.url, 'https://example.com/book-a-demo'); assert.equal(result.method, 'alternate-rules');
 });

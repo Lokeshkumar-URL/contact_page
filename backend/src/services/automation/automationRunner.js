@@ -5,7 +5,7 @@ import { appendRunResult, getRun, getRunSignal, setRunStatus, updateProgress, wa
 import { executeWithRetry, retryPolicy } from './retryPolicy.js';
 import { processWebsite as defaultProcessor } from './websiteProcessor.js';
 
-function failureResult(error) { return { status: error?.code === 'MANUAL_REVIEW' ? 'Manual Review' : 'Failed', reason: error?.message ?? 'Unknown processing error', screenshot: error?.screenshot ?? '', contactPageUrl: error?.contactPageUrl ?? '', claudeUsed: error?.claudeUsed === true, verificationEvidence: error?.code ?? 'PROCESSING_ERROR' }; }
+function failureResult(error) { const reviewCodes=error?.reasons?.map((reason)=>reason.code).filter(Boolean)??[]; return { status: error?.code === 'MANUAL_REVIEW' ? 'Manual Review' : error?.code === 'CAPTCHA_BLOCKED' ? 'Skipped' : 'Failed', reason: error?.message ?? 'Unknown processing error', screenshot: error?.screenshot ?? '', contactPageUrl: error?.contactPageUrl ?? '', claudeUsed: error?.claudeUsed === true, verificationEvidence: reviewCodes.length?reviewCodes.join(', '):error?.code ?? 'PROCESSING_ERROR', captcha: error?.captcha ?? '', captchaType: error?.captchaType ?? '' }; }
 function progressPatch(progress, result) { const status = String(result.status).toLowerCase(); const key = status === 'success' ? 'success' : status === 'manual review' ? 'manualReview' : status === 'skipped' ? 'skipped' : 'failed'; return { processed: progress.processed + 1, remaining: Math.max(0, progress.remaining - 1), [key]: progress[key] + 1 }; }
 
 export async function runAutomation({ runId, sheets, processWebsite = defaultProcessor, processorOptions = {}, policy = retryPolicy, staleAfterMs } = {}) {
@@ -28,7 +28,7 @@ export async function runAutomation({ runId, sheets, processWebsite = defaultPro
       for (const entry of batch.completed) {
         const result = entry.error ? failureResult(entry.error) : entry.value;
         await updateRowResult({ ...sheetOptions, columns: pending.columns, rowNumber: entry.item.rowNumber, runId, result });
-        appendRunResult(runId, { id: String(entry.item.rowNumber), rowNumber: entry.item.rowNumber, url: entry.item.url, contactPageUrl: result.contactPageUrl ?? '', status: String(result.status).toLowerCase().replace(/\s+/g, '_'), reason: result.reason ?? '', attemptCount: entry.item.attemptCount, timestamp: new Date().toISOString(), runId, screenshot: result.screenshot ?? '', claudeUsed: result.claudeUsed === true, verificationEvidence: result.verificationEvidence ?? '' });
+        appendRunResult(runId, { id: String(entry.item.rowNumber), rowNumber: entry.item.rowNumber, url: entry.item.url, contactPageUrl: result.contactPageUrl ?? '', status: String(result.status).toLowerCase().replace(/\s+/g, '_'), reason: result.reason ?? '', attemptCount: entry.item.attemptCount, timestamp: new Date().toISOString(), runId, screenshot: result.screenshot ?? '', claudeUsed: result.claudeUsed === true, verificationEvidence: result.verificationEvidence ?? '', captcha: result.captcha ?? '', captchaType: result.captchaType ?? '' });
         updateProgress(runId, progressPatch(getRun(runId).progress, result));
       }
       if (batch.unprocessed.length) await releaseReservedRows({ ...sheetOptions, columns: pending.columns, rows: batch.unprocessed, runId, reason: 'Run stopped before processing' });

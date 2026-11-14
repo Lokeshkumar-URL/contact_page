@@ -68,8 +68,9 @@ test('ambiguous, sensitive, consent, and unsupported fields are not auto-mapped'
     field(4, { label: 'Upload brief', type: 'file' }),
     field(5, { label: 'CAPTCHA response' }),
   ], profile);
-  assert.equal(result.mappings.length, 0);
-  assert.deepEqual(result.unresolved.map((item) => item.field.index), [0,1]);
+  // Subject is now filled with the profile subject (default "Business Inquiry"); an ambiguous "Title" still is not.
+  assert.deepEqual(result.mappings.map((item) => [item.field.index, item.profileKey, item.value]), [[0, 'subject', 'Business Inquiry']]);
+  assert.deepEqual(result.unresolved.map((item) => item.field.index), [1]);
   assert.deepEqual(result.ignored.map((item) => item.field.index), [2,3,4,5]);
 });
 
@@ -80,6 +81,34 @@ test('empty profile values remain unresolved instead of filling blank data', () 
 
 test('alias dictionary has broad coverage for every requested field', () => {
   for (const key of ['firstName','lastName','fullName','email','phone','organization','title','streetAddress','city','state','zipCode','message']) {
-    assert.ok(FIELD_ALIASES[key].length >= 7, `${key} should have broad aliases`);
+    assert.ok(FIELD_ALIASES[key].length >= 12, `${key} should have broad aliases`);
   }
+});
+
+test('maps additional real-world contact field wording without Claude', () => {
+  const cases = [
+    ['customer_first_name','firstName'], ['contact_surname','lastName'], ['name_of_contact','fullName'],
+    ['reply_to_email','email'], ['callback_number','phone'], ['practice_name','organization'],
+    ['position_in_company','title'], ['location_address','streetAddress'], ['municipality','city'],
+    ['state_or_province','state'], ['postalcode','zipCode'], ['support_request','message'],
+  ];
+  const result = mapFields(cases.map(([name], index) => field(index, { name, tag: name === 'support_request' ? 'textarea' : 'input' })), profile);
+  assert.deepEqual(result.mappings.map((mapping) => mapping.profileKey), cases.map(([, key]) => key));
+  assert.equal(result.unresolved.length, 0);
+});
+
+test('approved purpose and customer-status choices map without guessing', () => {
+  const choiceProfile = { ...profile, contactPurpose: 'General inquiry', existingCustomer: 'No' };
+  const result = mapFields([
+    field(0, { tag: 'select', type: 'select', label: 'What can we help you with?', required: true, options: [{ value: 'general', text: 'General inquiry' }] }),
+    field(1, { type: 'radio', label: 'No', groupLabel: 'Are you an existing customer?', required: true }),
+  ], choiceProfile);
+  assert.deepEqual(result.mappings.map((mapping) => mapping.profileKey), ['contactPurpose','existingCustomer']);
+  assert.equal(result.unresolved.length, 0);
+});
+
+test('approved custom fields map extra website labels after built-in rules', () => {
+  const customProfile={...profile,customFields:[{fieldName:'Practice size',aliases:'Number of locations, Office count',value:'1-5'}]};
+  const result=mapFields([field(20,{label:'Number of locations',tag:'select',type:'select',required:true,options:[{value:'1-5',text:'1-5'}]})],customProfile);
+  assert.equal(result.mappings[0].profileKey,'custom:0');assert.equal(result.mappings[0].value,'1-5');assert.equal(result.unresolved.length,0);
 });

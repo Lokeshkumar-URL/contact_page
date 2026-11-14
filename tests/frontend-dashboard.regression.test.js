@@ -15,7 +15,7 @@ import {
 import { INITIAL_RUN_STATE, automationRunReducer, canRunAction } from '../frontend/src/utils/automationRunState.js';
 import { EMPTY_PROGRESS, applyProgressEvent, calculateProgressPercent } from '../frontend/src/utils/progress.js';
 import { filterResults, summarizeResults } from '../frontend/src/utils/results.js';
-import { ApiError, apiRequest, getOperatorErrorMessage } from '../frontend/src/api/httpClient.js';
+import { ApiError, apiRequest, getOperatorErrorMessage, resolveApiAssetUrl } from '../frontend/src/api/httpClient.js';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -89,10 +89,16 @@ test('FE-003: contact profile defaults, validation, and settings integration wor
   assert.equal(validateContactProfile({ ...valid, email: 'not-an-email' }).email, 'Enter a valid email address.');
   assert.ok(validateContactProfile({ ...valid, phone: '123' }).phone);
   assert.ok(validateContactProfile({ ...valid, message: 'x'.repeat(1001) }).message);
+  const custom = normalizeContactProfile({ ...valid, customFields: [{ fieldName: ' Practice size ', aliases: ' Office count ', value: ' 1-5 ' }] });
+  assert.deepEqual(custom.customFields, [{ fieldName: 'Practice size', aliases: 'Office count', value: '1-5' }]);
+  assert.ok(validateContactProfile({ ...valid, customFields: [{ fieldName: 'Practice size', aliases: '', value: '' }] }).customFields);
 
   await assertModule('frontend/src/components/ContactProfileForm.jsx', /Save contact profile/);
   await assertModule('frontend/src/components/ContactProfileForm.jsx', /No API keys stored here/);
   await assertModule('frontend/src/components/ContactProfileForm.jsx', /maxLength="1000"/);
+  await assertModule('frontend/src/components/ContactProfileForm.jsx', /Custom form fields/);
+  await assertModule('frontend/src/components/FieldMappingRegistry.jsx', /Detected field suggestions/);
+  await assertModule('frontend/src/components/FieldMappingRegistry.jsx', /This website only/);
   await assertModule('frontend/src/pages/SettingsPage.jsx', /<ContactProfileForm initialProfile={loadContactProfile\(\)} onSave={saveContactProfile} \/>/);
 });
 
@@ -145,10 +151,11 @@ test('FE-006: immutable result filtering and status summary work', async () => {
   await assertModule('frontend/src/components/ResultsTable.jsx', /type="search"/);
   await assertModule('frontend/src/components/ResultsTable.jsx', /All statuses/);
   await assertModule('frontend/src/components/StatusBadge.jsx', /RESULT_STATUSES/);
-  await assertModule('frontend/src/pages/DashboardPage.jsx', /useRunResults\(run\.runId, live\.eventId\)/);
+  await assertModule('frontend/src/pages/DashboardPage.jsx', /useRunResults\(viewRunId, live\.eventId\)/);
 });
 
 test('FE-007: screenshot viewer has dialog, focus, and keyboard contracts', async () => {
+  assert.equal(resolveApiAssetUrl('/api/results/run-1/screenshots/a.png'), 'http://localhost:3000/api/results/run-1/screenshots/a.png');
   await assertModule('frontend/src/components/ScreenshotModal.jsx', /role="dialog"/);
   await assertModule('frontend/src/components/ScreenshotModal.jsx', /aria-modal="true"/);
   await assertModule('frontend/src/components/ScreenshotModal.jsx', /event\.key==='Escape'/);

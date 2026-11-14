@@ -26,7 +26,7 @@ export async function reserveRows({ sheets, spreadsheetId = env.googleSheetId, s
 
 export async function updateRowResult({ sheets, spreadsheetId = env.googleSheetId, sheetName = env.googleSheetTab, columns, rowNumber, runId, result, now = new Date() }) {
   if (!isTerminalStatus(result.status)) throw new Error(`Result status must be terminal; received ${result.status}.`);
-  await writeFields({ sheets, spreadsheetId, sheetName, columns, rowNumber, fields: { [SHEET_HEADERS.status]: result.status, [SHEET_HEADERS.reason]: result.reason ?? '', [SHEET_HEADERS.timestamp]: now.toISOString(), [SHEET_HEADERS.screenshot]: result.screenshot ?? '', [SHEET_HEADERS.runId]: runId, [SHEET_HEADERS.contactPageUrl]: result.contactPageUrl ?? '', [SHEET_HEADERS.claudeUsed]: result.claudeUsed ? 'Yes' : 'No', [SHEET_HEADERS.verificationEvidence]: result.verificationEvidence ?? '', [SHEET_HEADERS.reservedAt]: '' } });
+  await writeFields({ sheets, spreadsheetId, sheetName, columns, rowNumber, fields: { [SHEET_HEADERS.status]: result.status, [SHEET_HEADERS.reason]: result.reason ?? '', [SHEET_HEADERS.timestamp]: now.toISOString(), [SHEET_HEADERS.screenshot]: result.screenshot ?? '', [SHEET_HEADERS.runId]: runId, [SHEET_HEADERS.contactPageUrl]: result.contactPageUrl ?? '', [SHEET_HEADERS.claudeUsed]: result.claudeUsed ? 'Yes' : 'No', [SHEET_HEADERS.verificationEvidence]: result.verificationEvidence ?? '', [SHEET_HEADERS.captcha]: result.captcha ?? '', [SHEET_HEADERS.reservedAt]: '' } });
 }
 
 export async function recoverStaleRows({ sheets, spreadsheetId = env.googleSheetId, sheetName = env.googleSheetTab, columns, rows, staleAfterMs = 30 * 60 * 1000, now = new Date() }) {

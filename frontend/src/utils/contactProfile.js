@@ -10,6 +10,10 @@ export const DEFAULT_CONTACT_PROFILE = Object.freeze({
   state: 'DE',
   zipCode: '19703',
   message: '',
+  subject: 'Business Inquiry',
+  contactPurpose: '',
+  existingCustomer: '',
+  customFields: [],
 });
 
 const requiredFields = {
@@ -41,11 +45,16 @@ export function validateContactProfile(profile) {
     errors.message = 'Approved message must be 1,000 characters or fewer.';
   }
 
+  if (!Array.isArray(profile.customFields)) errors.customFields = 'Custom fields must be a list.';
+  else if (profile.customFields.some((field) => !field.fieldName?.trim() || !field.value?.trim())) errors.customFields = 'Every custom field needs a field name and approved value.';
+
   return errors;
 }
 
 export function normalizeContactProfile(profile) {
-  return Object.fromEntries(
+  const normalized = Object.fromEntries(
     Object.entries(profile).map(([field, value]) => [field, typeof value === 'string' ? value.trim() : value]),
   );
+  normalized.customFields = (profile.customFields ?? []).map((field) => ({ fieldName: field.fieldName.trim(), aliases: field.aliases?.trim() ?? '', value: field.value.trim() })).filter((field) => field.fieldName && field.value);
+  return normalized;
 }

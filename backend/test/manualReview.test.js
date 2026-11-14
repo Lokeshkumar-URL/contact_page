@@ -22,3 +22,7 @@ test('complete ordinary forms pass the safety gate', () => {
 test('CAPTCHA and legal consent stop with the existing MANUAL_REVIEW code', () => {
   assert.throws(() => assertSafeForAutomation({ form: { hasCaptcha: true, fields: [field('#terms', 'checkbox', 'Accept terms')] } }), (error) => error instanceof ManualReviewError && error.code === 'MANUAL_REVIEW' && error.retryable === false);
 });
+
+test('manual review reports the exact unresolved required field', () => {
+  assert.throws(() => assertSafeForAutomation({ form: { fields: [field('#purpose', 'select', 'What can we help you with?', { required: true, fillable: true })] }, mappings: [] }), (error) => error instanceof ManualReviewError && /What can we help you with/.test(error.message) && error.reasons[0].code === 'AMBIGUOUS_REQUIRED_FIELD');
+});

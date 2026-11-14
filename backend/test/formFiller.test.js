@@ -6,12 +6,14 @@ import { ManualReviewError } from '../src/services/browser/manualReview.js';
 const mapping = (selector, overrides = {}) => ({ selector, value: 'Example value', field: { selector, tag: 'input', type: 'text', required: false, label: '', accessibleName: '', name: '', id: '', options: [], ...overrides.field }, ...overrides });
 
 function mockPage({ missing = new Set() } = {}) {
-  const calls = { wait: [], evaluate: [], click: [], waitForFunction: 0 };
+  const calls = { wait: [], evaluate: [], click: [], type: [], keys: [], waitForFunction: 0 };
   return {
     calls,
     waitForSelector: async (selector) => { calls.wait.push(selector); if (missing.has(selector)) throw new Error('missing'); return {}; },
     evaluate: async (_callback, argument) => { calls.evaluate.push(argument); return Array.isArray(argument) ? argument.map((item) => ({ selector: item.selector, valid: true })) : { status: 'filled' }; },
-    click: async (selector) => calls.click.push(selector),
+    click: async (selector, options) => calls.click.push({ selector, options }),
+    type: async (selector, value, options) => calls.type.push({ selector, value, options }),
+    keyboard: { press: async (key) => calls.keys.push(key) },
     waitForFunction: async () => { calls.waitForFunction += 1; },
   };
 }
@@ -35,6 +37,8 @@ test('text, email, telephone, textarea, select, and radio mappings are filled', 
   const result = await fillForm({ page, mappings });
   assert.equal(result.filled.length, 6); assert.equal(result.failed.length, 0);
   assert.deepEqual(page.calls.wait, mappings.map((item) => item.selector));
+  assert.deepEqual(page.calls.type.map((item) => item.selector), ['#name','#email','#phone','#message']);
+  assert.equal(page.calls.keys.length, 4);
 });
 
 test('checkboxes require explicit approval and consent checkboxes stay blocked', async () => {
@@ -49,7 +53,7 @@ test('checkboxes require explicit approval and consent checkboxes stay blocked',
 test('custom dropdowns use visible options through bounded browser interactions', async () => {
   const page = mockPage(); const custom = mapping('#custom-state', { value: 'Delaware', field: { isCustomDropdown: true } });
   const result = await fillForm({ page, mappings: [custom], timeout: 500 });
-  assert.equal(result.filled.length, 1); assert.deepEqual(page.calls.click, ['#custom-state']); assert.equal(page.calls.waitForFunction, 1);
+  assert.equal(result.filled.length, 1); assert.equal(page.calls.click[0].selector, '#custom-state'); assert.equal(page.calls.waitForFunction, 1);
 });
 
 test('new dynamic fields can be discovered and filled in a later pass', async () => {
