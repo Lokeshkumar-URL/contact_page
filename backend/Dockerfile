@@ -22,7 +22,11 @@ RUN PUPPETEER_SKIP_DOWNLOAD=true npm ci --omit=dev --workspace backend \
     && apt-get update \
     && npx puppeteer browsers install chrome --install-deps \
     && rm -rf /var/lib/apt/lists/* \
-    && chown -R node:node /home/node/.cache/puppeteer /app
+    && chown -R node:node /home/node/.cache/puppeteer /app \
+    && CHROME_SANDBOX="$(find /home/node/.cache/puppeteer -type f -name chrome_sandbox -print -quit)" \
+    && test -n "$CHROME_SANDBOX" \
+    && chown root:root "$CHROME_SANDBOX" \
+    && chmod 4755 "$CHROME_SANDBOX"
 
 COPY --chown=node:node backend/src backend/src
 COPY --chown=node:node shared shared
