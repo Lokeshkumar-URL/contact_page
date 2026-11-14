@@ -5,6 +5,12 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
+# Puppeteer's browser installer needs unzip to extract the downloaded Chrome
+# archive. ca-certificates is required for browser/API HTTPS connections.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates unzip \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 COPY frontend/package.json frontend/package.json
 COPY backend/package.json backend/package.json
