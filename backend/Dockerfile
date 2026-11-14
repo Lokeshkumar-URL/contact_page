@@ -1,6 +1,7 @@
 FROM node:22-bookworm-slim
 
 ENV PUPPETEER_CACHE_DIR=/home/node/.cache/puppeteer
+ENV CHROME_DEVEL_SANDBOX=/usr/local/sbin/chrome-devel-sandbox
 ENV NODE_ENV=production
 
 WORKDIR /app
@@ -25,8 +26,8 @@ RUN PUPPETEER_SKIP_DOWNLOAD=true npm ci --omit=dev --workspace backend \
     && chown -R node:node /home/node/.cache/puppeteer /app \
     && CHROME_SANDBOX="$(find /home/node/.cache/puppeteer -type f -name chrome_sandbox -print -quit)" \
     && test -n "$CHROME_SANDBOX" \
-    && chown root:root "$CHROME_SANDBOX" \
-    && chmod 4755 "$CHROME_SANDBOX"
+    && install -o root -g root -m 4755 "$CHROME_SANDBOX" "$CHROME_DEVEL_SANDBOX" \
+    && test -u "$CHROME_DEVEL_SANDBOX"
 
 COPY --chown=node:node backend/src backend/src
 COPY --chown=node:node shared shared

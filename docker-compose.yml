@@ -17,6 +17,8 @@ services:
     volumes:
       - ./backend/storage:/app/backend/storage
     init: true
+    cap_add:
+      - SYS_ADMIN
     shm_size: 1gb
     restart: unless-stopped
     healthcheck:
