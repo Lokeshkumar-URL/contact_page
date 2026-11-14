@@ -19,7 +19,9 @@ COPY shared/package.json shared/package.json
 # Install only backend production dependencies, then install Puppeteer's
 # matching Chrome build together with its required Linux libraries.
 RUN PUPPETEER_SKIP_DOWNLOAD=true npm ci --omit=dev --workspace backend \
+    && apt-get update \
     && npx puppeteer browsers install chrome --install-deps \
+    && rm -rf /var/lib/apt/lists/* \
     && chown -R node:node /home/node/.cache/puppeteer /app
 
 COPY --chown=node:node backend/src backend/src
