@@ -71,7 +71,7 @@ One suitable single-server layout is:
 ```text
 Operator -> authenticated HTTPS reverse proxy
   /       -> frontend/dist
-  /api/   -> Node backend on private port 3000
+  /api/   -> Node backend on private port 5173
 Node backend -> CapSolver API, Google Sheets, target websites
 ```
 

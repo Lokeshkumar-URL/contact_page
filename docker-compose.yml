@@ -37,5 +37,5 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "127.0.0.1:7878:80"
+      - "7878:80"
     restart: unless-stopped

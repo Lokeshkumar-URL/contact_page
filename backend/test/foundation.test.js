@@ -25,7 +25,7 @@ async function request(path, options = {}) { return fetch(`${baseUrl}${path}`, {
 
 test('environment validation applies safe defaults and rejects unsafe production config', () => {
   const value = loadEnv({ NODE_ENV: 'test' });
-  assert.equal(value.port, 3000); assert.equal(value.dryRun, true); assert.equal(value.batchSize, 10);
+  assert.equal(value.port, 5173); assert.equal(value.dryRun, true); assert.equal(value.batchSize, 10);
   assert.throws(() => loadEnv({ NODE_ENV: 'production' }), /API_AUTH_TOKEN is required/);
   assert.throws(() => loadEnv({ NODE_ENV: 'test', PORT: '70000' }), /Invalid environment configuration/);
 });

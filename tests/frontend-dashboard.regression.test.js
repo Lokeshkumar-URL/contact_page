@@ -155,7 +155,7 @@ test('FE-006: immutable result filtering and status summary work', async () => {
 });
 
 test('FE-007: screenshot viewer has dialog, focus, and keyboard contracts', async () => {
-  assert.equal(resolveApiAssetUrl('/api/results/run-1/screenshots/a.png'), 'http://localhost:3000/api/results/run-1/screenshots/a.png');
+  assert.equal(resolveApiAssetUrl('/api/results/run-1/screenshots/a.png'), 'http://localhost:5173/api/results/run-1/screenshots/a.png');
   await assertModule('frontend/src/components/ScreenshotModal.jsx', /role="dialog"/);
   await assertModule('frontend/src/components/ScreenshotModal.jsx', /aria-modal="true"/);
   await assertModule('frontend/src/components/ScreenshotModal.jsx', /event\.key==='Escape'/);
@@ -176,7 +176,7 @@ test('FE-008: API client handles JSON, server failures, and safe messages', asyn
   await assertModule('frontend/src/api/httpClient.js', /AbortController/);
   await assertModule('frontend/src/api/httpClient.js', /NETWORK_ERROR/);
   await assertModule('frontend/src/hooks/useAutomationRun.js', /getOperatorErrorMessage\(error\)/);
-  await assertModule('frontend/.env.example', /http:\/\/localhost:3000\/api/);
+  await assertModule('frontend/.env.example', /http:\/\/localhost:5173\/api/);
 });
 
 test('FE-009: responsive and accessibility contracts exist', async () => {
