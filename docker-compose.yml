@@ -12,8 +12,8 @@ services:
       APP_BASE_URL: http://leadfill.zeacrm.com
       PUPPETEER_HEADLESS: "true"
       CAPTCHA_MANUAL_ENTRY_TIMEOUT_SECONDS: 0
-    ports:
-      - "127.0.0.1:5173:5173"
+    expose:
+      - "5173"
     volumes:
       - ./backend/storage:/app/backend/storage
     init: true
