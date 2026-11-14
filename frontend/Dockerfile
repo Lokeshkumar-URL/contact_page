@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -7,7 +7,12 @@ COPY frontend/package.json frontend/package.json
 COPY backend/package.json backend/package.json
 COPY shared/package.json shared/package.json
 
-RUN npm ci --workspace frontend
+# package-lock.json is produced on Windows. npm can omit Rolldown's Linux
+# optional native package when consuming that lockfile in Docker, so install
+# the exact Linux/glibc binding that matches the locked Rolldown version.
+RUN npm ci --workspace frontend \
+    && ROLLDOWN_VERSION=$(node -p "require('./node_modules/rolldown/package.json').version") \
+    && npm install --workspace frontend --no-save --package-lock=false "@rolldown/binding-linux-x64-gnu@${ROLLDOWN_VERSION}"
 
 COPY frontend frontend
 
