@@ -8,8 +8,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5173
-      FRONTEND_ORIGIN: http://leadfill.zeacrm.com
-      APP_BASE_URL: http://leadfill.zeacrm.com
+      FRONTEND_ORIGIN: https://leadfill.zeacrm.com
+      APP_BASE_URL: https://leadfill.zeacrm.com
       PUPPETEER_HEADLESS: "true"
       CAPTCHA_MANUAL_ENTRY_TIMEOUT_SECONDS: 0
     expose:
